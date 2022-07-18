@@ -22,6 +22,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <math.h>
+#include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,6 +51,7 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 #define WINDOW 5
 #define resolution 10
+short flag = 0;
 float ldr[2] = { 0, };
 float on1_sum = 0, on2_sum = 0;
 float off1_sum = 0, off2_sum = 0;
@@ -56,8 +59,8 @@ float on1_avg = 0, on2_avg = 0;
 float off1_avg = 0, off2_avg = 0;
 int count = 0;
 float diff = 0, ldr1dif = 0, ldr2dif = 0;
-float min = 0, max = 0; //reverse diff
-		/* USER CODE END PV */
+float min = 0, max = 0;
+/* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -87,65 +90,66 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 			count = 0;
 			HAL_GPIO_WritePin(GPIOC, LED_OUTPUT_Pin, SET);
 		}
-		ldr1dif = on1_avg - off1_avg;
-		ldr2dif = on2_avg - off2_avg;
+		if (flag == 1) {
+			ldr1dif = on1_avg - off1_avg;
+			ldr2dif = on2_avg - off2_avg;
 
-		diff = sqrt(pow(ldr1dif, 2) + pow(ldr2dif, 2)) / resolution;
-		max = max < diff ? diff : max;
-		min = min > diff ? diff : min;
+			diff = sqrt(pow(ldr1dif, 2) + pow(ldr2dif, 2)) / resolution;
 
-		sprintf((char*) tx_buffer, "%.3f,%.3f,%.3f\r\n", diff, min, max);
-		tx_com(tx_buffer, strlen((char const*) tx_buffer));
+			max = max < diff ? diff : max;
+			min = min > diff ? diff : min;
+
+			sprintf((char*) tx_buffer, "%.3f,%.3f,%.3f\r\n", max-diff, min, max);
+			tx_com(tx_buffer, strlen((char const*) tx_buffer));
 //		sprintf((char*) tx_buffer, "%.3f,%.3f,%.3f,%.3f \r\n", on1_avg,off1_avg,on2_avg,off2_avg);
 //				tx_com(tx_buffer, strlen((char const*) tx_buffer));
+		}
 	}
 
 	if (htim->Instance == TIM11) //1ms timer
 	{
-		if (count < WINDOW && HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 1) { //count is less than WINDOW if count is upper than WINDOW this loop will not act.
-			count++;
-			HAL_ADC_Start(&hadc1); //Start ADC1 ch1(LED ON)
-			HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-			ldr[0] = HAL_ADC_GetValue(&hadc1); //get ch1 value
+		if (count < WINDOW) {
+			if (HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 1) { //count is less than WINDOW if count is upper than WINDOW this loop will not act.
+				count++;
+				HAL_ADC_Start(&hadc1); //Start ADC1 ch1(LED ON)
+				HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+				ldr[0] = HAL_ADC_GetValue(&hadc1); //get ch1 value
 
-			HAL_ADC_Start(&hadc1); //Start ADC1 ch2(LED OFF)
-			HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-			ldr[1] = HAL_ADC_GetValue(&hadc1); //get ch2 value
+				HAL_ADC_Start(&hadc1); //Start ADC1 ch2(LED OFF)
+				HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+				ldr[1] = HAL_ADC_GetValue(&hadc1); //get ch2 value
 
-			on1_sum += ldr[0];
-			on2_sum += ldr[1];
+				on1_sum += ldr[0];
+				on2_sum += ldr[1];
 
-		} else if (count < WINDOW
-				&& HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 0) {
-			count++;
-			HAL_ADC_Start(&hadc1); //Start ADC1 ch1(LED ON)
-			HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-			ldr[0] = HAL_ADC_GetValue(&hadc1); //get ch1 value
+			} else if (HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 0) {
+				count++;
+				HAL_ADC_Start(&hadc1); //Start ADC1 ch1(LED ON)
+				HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+				ldr[0] = HAL_ADC_GetValue(&hadc1); //get ch1 value
 
-			HAL_ADC_Start(&hadc1); //Start ADC1 ch2(LED OFF)
-			HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-			ldr[1] = HAL_ADC_GetValue(&hadc1); //get ch2 value
+				HAL_ADC_Start(&hadc1); //Start ADC1 ch2(LED OFF)
+				HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+				ldr[1] = HAL_ADC_GetValue(&hadc1); //get ch2 value
 
-			off1_sum += ldr[0];
-			off2_sum += ldr[1];
-
-		} else if (count == WINDOW
-				&& HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 1) { //if LED ON and count is WINDOW
-			on1_avg = on1_sum / WINDOW;
-			on2_avg = on2_sum / WINDOW;
-			on1_sum = 0;
-			on2_sum = 0;
-			count++;
-
-		} else if (count == WINDOW
-				&& HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 0) { //if LED OFF and count is WINDOW
-			off1_avg = off1_sum / WINDOW;
-			off2_avg = off2_sum / WINDOW;
-			off1_sum = 0;
-			off2_sum = 0;
-			count++;
+				off1_sum += ldr[0];
+				off2_sum += ldr[1];
+			}
+		} else if (count == WINDOW) {
+			if (HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 1) { //if LED ON and count is WINDOW
+				on1_avg = on1_sum / WINDOW;
+				on2_avg = on2_sum / WINDOW;
+				on1_sum = 0;
+				on2_sum = 0;
+				count++;
+			} else if (HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 0) { //if LED OFF and count is WINDOW
+				off1_avg = off1_sum / WINDOW;
+				off2_avg = off2_sum / WINDOW;
+				off1_sum = 0;
+				off2_sum = 0;
+				count++;
+			}
 		}
-
 	}
 }
 /* USER CODE END 0 */
@@ -183,10 +187,13 @@ int main(void) {
 	MX_USART2_UART_Init();
 	/* USER CODE BEGIN 2 */
 
-	//TIM Init
+//TIM Init
 	HAL_TIM_Base_Start_IT(&htim11);
-	HAL_Delay(200);
 	HAL_TIM_Base_Start_IT(&htim10);
+	HAL_Delay(40); //Init first on,off value
+	flag = 1;
+	min = diff;
+	max = diff;
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
