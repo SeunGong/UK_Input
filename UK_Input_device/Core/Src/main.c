@@ -48,6 +48,7 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 #define WINDOW 5
+#define resolution 10
 float ldr[2] = { 0, };
 float on1_sum = 0, on2_sum = 0;
 float off1_sum = 0, off2_sum = 0;
@@ -55,8 +56,8 @@ float on1_avg = 0, on2_avg = 0;
 float off1_avg = 0, off2_avg = 0;
 int count = 0;
 float diff = 0, ldr1dif = 0, ldr2dif = 0;
-float min = 0, max = 1000;
-/* USER CODE END PV */
+float min = 0, max = 0; //reverse diff
+		/* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -89,12 +90,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		ldr1dif = on1_avg - off1_avg;
 		ldr2dif = on2_avg - off2_avg;
 
-		diff = sqrt(pow(ldr1dif, 2) + pow(ldr2dif, 2));
+		diff = sqrt(pow(ldr1dif, 2) + pow(ldr2dif, 2)) / resolution;
+		max = max < diff ? diff : max;
+		min = min > diff ? diff : min;
 
-		max = diff > max ? diff : max;
-		min = diff < min ? diff : min;
-
-		sprintf((char*) tx_buffer, "%.3f,%.3f,%.3f \r\n", max-diff, min, max);
+		sprintf((char*) tx_buffer, "%.3f,%.3f,%.3f\r\n", diff, min, max);
 		tx_com(tx_buffer, strlen((char const*) tx_buffer));
 //		sprintf((char*) tx_buffer, "%.3f,%.3f,%.3f,%.3f \r\n", on1_avg,off1_avg,on2_avg,off2_avg);
 //				tx_com(tx_buffer, strlen((char const*) tx_buffer));
@@ -184,11 +184,9 @@ int main(void) {
 	/* USER CODE BEGIN 2 */
 
 	//TIM Init
-	HAL_TIM_Base_Start_IT(&htim10);
 	HAL_TIM_Base_Start_IT(&htim11);
-
-	HAL_Delay(100);
-	max=diff;
+	HAL_Delay(200);
+	HAL_TIM_Base_Start_IT(&htim10);
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
