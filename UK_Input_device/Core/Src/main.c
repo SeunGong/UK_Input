@@ -42,6 +42,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
+DMA_HandleTypeDef hdma_adc1;
 
 TIM_HandleTypeDef htim10;
 TIM_HandleTypeDef htim11;
@@ -49,22 +50,23 @@ TIM_HandleTypeDef htim11;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-#define WINDOW 5
+#define WINDOW 3
 #define resolution 10
 short flag = 0;
-float ldr[2] = { 0, };
-float on1_sum = 0, on2_sum = 0;
-float off1_sum = 0, off2_sum = 0;
-float on1_avg = 0, on2_avg = 0;
-float off1_avg = 0, off2_avg = 0;
+uint16_t ldr[2] = { 0, };
+uint16_t on1_sum = 0, on2_sum = 0;
+uint16_t off1_sum = 0, off2_sum = 0;
+uint16_t on1_avg = 0, on2_avg = 0;
+uint16_t off1_avg = 0, off2_avg = 0;
 int count = 0;
-float diff = 0, ldr1dif = 0, ldr2dif = 0;
-float min = 0, max = 0;
+uint16_t diff = 0, ldr1dif = 0, ldr2dif = 0;
+uint16_t min = 0, max = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM10_Init(void);
 static void MX_TIM11_Init(void);
@@ -94,43 +96,44 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 			ldr1dif = on1_avg - off1_avg;
 			ldr2dif = on2_avg - off2_avg;
 
-			diff = sqrt(pow(ldr1dif, 2) + pow(ldr2dif, 2)) / resolution;
+			diff = sqrt(pow(ldr1dif, 2) + pow(ldr2dif, 2));
 
 			max = max < diff ? diff : max;
 			min = min > diff ? diff : min;
 
-			sprintf((char*) tx_buffer, "%.3f,%.3f,%.3f\r\n", max-diff, min, max);
-			tx_com(tx_buffer, strlen((char const*) tx_buffer));
-//		sprintf((char*) tx_buffer, "%.3f,%.3f,%.3f,%.3f \r\n", on1_avg,off1_avg,on2_avg,off2_avg);
-//				tx_com(tx_buffer, strlen((char const*) tx_buffer));
+//			sprintf((char*) tx_buffer, "%.3f,%.3f,%.3f\r\n", max - diff, min,
+//					max);
+//			tx_com(tx_buffer, strlen((char const*) tx_buffer));
+		sprintf((char*) tx_buffer, "%.3f,%.3f,%.3f,%.3f \r\n", on1_avg,off1_avg,on2_avg,off2_avg);
+				tx_com(tx_buffer, strlen((char const*) tx_buffer));
 		}
 	}
 
-	if (htim->Instance == TIM11) //1ms timer
+	if (htim->Instance == TIM11) //2ms timer
 	{
 		if (count < WINDOW) {
 			if (HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 1) { //count is less than WINDOW if count is upper than WINDOW this loop will not act.
 				count++;
-				HAL_ADC_Start(&hadc1); //Start ADC1 ch1(LED ON)
-				HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-				ldr[0] = HAL_ADC_GetValue(&hadc1); //get ch1 value
 
-				HAL_ADC_Start(&hadc1); //Start ADC1 ch2(LED OFF)
-				HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-				ldr[1] = HAL_ADC_GetValue(&hadc1); //get ch2 value
+//				HAL_ADC_Start(&hadc1); //Start ADC1 ch1(LED ON)
+//				HAL_ADC_PollForConversion(&hadc1, 2);
+//				ldr[0] = HAL_ADC_GetValue(&hadc1); //get ch1 value
+//				HAL_ADC_Start(&hadc1); //Start ADC1 ch2(LED OFF)
+//				HAL_ADC_PollForConversion(&hadc1, 2);
+//				ldr[1] = HAL_ADC_GetValue(&hadc1); //get ch2 value
 
 				on1_sum += ldr[0];
 				on2_sum += ldr[1];
 
 			} else if (HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 0) {
 				count++;
-				HAL_ADC_Start(&hadc1); //Start ADC1 ch1(LED ON)
-				HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-				ldr[0] = HAL_ADC_GetValue(&hadc1); //get ch1 value
-
-				HAL_ADC_Start(&hadc1); //Start ADC1 ch2(LED OFF)
-				HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-				ldr[1] = HAL_ADC_GetValue(&hadc1); //get ch2 value
+//				HAL_ADC_Start(&hadc1); //Start ADC1 ch1(LED ON)
+//				HAL_ADC_PollForConversion(&hadc1, 2);
+//				ldr[0] = HAL_ADC_GetValue(&hadc1); //get ch1 value
+//
+//				HAL_ADC_Start(&hadc1); //Start ADC1 ch2(LED OFF)
+//				HAL_ADC_PollForConversion(&hadc1, 2);
+//				ldr[1] = HAL_ADC_GetValue(&hadc1); //get ch2 value
 
 				off1_sum += ldr[0];
 				off2_sum += ldr[1];
@@ -181,12 +184,13 @@ int main(void) {
 
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
+	MX_DMA_Init();
 	MX_ADC1_Init();
 	MX_TIM10_Init();
 	MX_TIM11_Init();
 	MX_USART2_UART_Init();
 	/* USER CODE BEGIN 2 */
-
+	HAL_ADC_Start_DMA(&hadc1, ldr, 2);
 //TIM Init
 	HAL_TIM_Base_Start_IT(&htim11);
 	HAL_TIM_Base_Start_IT(&htim10);
@@ -272,14 +276,13 @@ static void MX_ADC1_Init(void) {
 	hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
 	hadc1.Init.Resolution = ADC_RESOLUTION_12B;
 	hadc1.Init.ScanConvMode = ENABLE;
-	hadc1.Init.ContinuousConvMode = DISABLE;
-	hadc1.Init.DiscontinuousConvMode = ENABLE;
-	hadc1.Init.NbrOfDiscConversion = 2;
+	hadc1.Init.ContinuousConvMode = ENABLE;
+	hadc1.Init.DiscontinuousConvMode = DISABLE;
 	hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
 	hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
 	hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
 	hadc1.Init.NbrOfConversion = 2;
-	hadc1.Init.DMAContinuousRequests = DISABLE;
+	hadc1.Init.DMAContinuousRequests = ENABLE;
 	hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
 	if (HAL_ADC_Init(&hadc1) != HAL_OK) {
 		Error_Handler();
@@ -289,7 +292,7 @@ static void MX_ADC1_Init(void) {
 	 */
 	sConfig.Channel = ADC_CHANNEL_0;
 	sConfig.Rank = 1;
-	sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+	sConfig.SamplingTime = ADC_SAMPLETIME_144CYCLES;
 	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
 		Error_Handler();
 	}
@@ -353,7 +356,7 @@ static void MX_TIM11_Init(void) {
 	htim11.Instance = TIM11;
 	htim11.Init.Prescaler = 8400;
 	htim11.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim11.Init.Period = 10;
+	htim11.Init.Period = 20;
 	htim11.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	htim11.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 	if (HAL_TIM_Base_Init(&htim11) != HAL_OK) {
@@ -393,6 +396,21 @@ static void MX_USART2_UART_Init(void) {
 	/* USER CODE BEGIN USART2_Init 2 */
 
 	/* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+ * Enable DMA controller clock
+ */
+static void MX_DMA_Init(void) {
+
+	/* DMA controller clock enable */
+	__HAL_RCC_DMA2_CLK_ENABLE();
+
+	/* DMA interrupt init */
+	/* DMA2_Stream0_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 }
 
