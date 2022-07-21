@@ -85,12 +85,12 @@ static uint8_t tx_buffer[100];
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim->Instance == TIM10) //10ms Timer. If elapsed 10ms this timer change status of LED
 	{
-		if(HAL_GPIO_ReadPin(GPIOC, TIM10_Check_Pin)==0){
+		/*if(HAL_GPIO_ReadPin(GPIOC, TIM10_Check_Pin)==0){
 				HAL_GPIO_WritePin(GPIOC, TIM10_Check_Pin, SET);
 		}else{
 				HAL_GPIO_WritePin(GPIOC, TIM10_Check_Pin, RESET);
-		}
-	/*	if (HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 1) {
+		}*/ //measure for timer period
+		if (HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 1) {
 			count = 0;
 			HAL_GPIO_WritePin(GPIOC, LED_OUTPUT_Pin, RESET);
 		} else {
@@ -106,22 +106,22 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 			max = max < diff ? diff : max;
 			min = min > diff ? diff : min;
 
-			sprintf((char*) tx_buffer, "%d,%d,%d\r\n", diff, min,
-					max);
-			tx_com(tx_buffer, strlen((char const*) tx_buffer));
+//			sprintf((char*) tx_buffer, "%d,%d,%d\r\n", diff, min,
+//					max);
+//			tx_com(tx_buffer, strlen((char const*) tx_buffer));
 //		sprintf((char*) tx_buffer, "%.3f,%.3f,%.3f,%.3f \r\n", on1_avg,off1_avg,on2_avg,off2_avg);
 //				tx_com(tx_buffer, strlen((char const*) tx_buffer));
-		}*/
+		}
 	}
 
 	if (htim->Instance == TIM11) //1ms timer
 	{
-		if(HAL_GPIO_ReadPin(GPIOC, TIM10_Check_Pin)==0){
+/*		if(HAL_GPIO_ReadPin(GPIOC, TIM11_Check_Pin)==0){
 					HAL_GPIO_WritePin(GPIOC, TIM11_Check_Pin, SET);
 			}else{
 					HAL_GPIO_WritePin(GPIOC, TIM11_Check_Pin, RESET);
-			}
-		/*if (count < WINDOW) {
+			}*/ //measure for timer period
+		if (count < WINDOW) {
 			if (HAL_GPIO_ReadPin(GPIOC, LED_OUTPUT_Pin) == 1) { //count is less than WINDOW if count is upper than WINDOW this loop will not act.
 				count++;
 
@@ -162,7 +162,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 				off2_sum = 0;
 				count++;
 			}
-		}*/
+		}
 	}
 }
 /* USER CODE END 0 */
