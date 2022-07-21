@@ -61,6 +61,8 @@ void Error_Handler(void);
 #define B1_GPIO_Port GPIOC
 #define LED_OUTPUT_Pin GPIO_PIN_0
 #define LED_OUTPUT_GPIO_Port GPIOC
+#define TIM10_Check_Pin GPIO_PIN_1
+#define TIM10_Check_GPIO_Port GPIOC
 #define LDR1_Pin GPIO_PIN_0
 #define LDR1_GPIO_Port GPIOA
 #define LDR2_Pin GPIO_PIN_1
@@ -71,6 +73,8 @@ void Error_Handler(void);
 #define USART_RX_GPIO_Port GPIOA
 #define LD2_Pin GPIO_PIN_5
 #define LD2_GPIO_Port GPIOA
+#define TIM11_Check_Pin GPIO_PIN_7
+#define TIM11_Check_GPIO_Port GPIOC
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
