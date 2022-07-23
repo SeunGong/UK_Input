@@ -73,10 +73,10 @@ void Error_Handler(void);
 #define USART_RX_GPIO_Port GPIOA
 #define LD2_Pin GPIO_PIN_5
 #define LD2_GPIO_Port GPIOA
-#define TIM1_Check_Pin GPIO_PIN_6
-#define TIM1_Check_GPIO_Port GPIOC
 #define TIM11_Check_Pin GPIO_PIN_7
 #define TIM11_Check_GPIO_Port GPIOC
+#define TIM1_Check_Pin GPIO_PIN_9
+#define TIM1_Check_GPIO_Port GPIOA
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
